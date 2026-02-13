@@ -21,6 +21,7 @@ type Config struct {
 	DatabaseURL  string `envconfig:"DATABASE_URL" required:"true"`
 	Port         string `envconfig:"PORT" default:"8080"`
 	SecureCookie bool   `envconfig:"SECURE_COOKIE" default:"true"`
+	BaseURL      string `envconfig:"BASE_URL" default:"http://localhost:8080"`
 }
 
 func main() {
@@ -63,10 +64,13 @@ func main() {
 		apiHandler := &handlers.API{
 			Queries: queries,
 			Log:     logger,
+			BaseURL: cfg.BaseURL,
 		}
 
-		r.Get("/events/{eventID}/engagement", apiHandler.GetEventEngagement)
-		r.Get("/events/{eventID}/questions/{questionID}/engagement", apiHandler.GetQuestionEngagement)
+		// RESTful API for broadcast graphics
+		r.Get("/events/{eventID}", apiHandler.GetEvent)
+		r.Get("/events/{eventID}/questions", apiHandler.GetQuestions)
+		r.Get("/events/{eventID}/questions/{questionID}", apiHandler.GetQuestion)
 	})
 
 	r.Route("/{slug}", func(r chi.Router) {

@@ -9,6 +9,19 @@ import (
 	"context"
 )
 
+const getEventByID = `-- name: GetEventByID :one
+SELECT event_id, description, created_at
+FROM events
+WHERE event_id = $1
+`
+
+func (q *Queries) GetEventByID(ctx context.Context, eventID string) (Event, error) {
+	row := q.db.QueryRowContext(ctx, getEventByID, eventID)
+	var i Event
+	err := row.Scan(&i.EventID, &i.Description, &i.CreatedAt)
+	return i, err
+}
+
 const getEventBySlug = `-- name: GetEventBySlug :one
 SELECT e.event_id, e.description, e.created_at
 FROM events e
@@ -38,6 +51,27 @@ type GetQuestionByEventAndIndexParams struct {
 
 func (q *Queries) GetQuestionByEventAndIndex(ctx context.Context, arg GetQuestionByEventAndIndexParams) (Question, error) {
 	row := q.db.QueryRowContext(ctx, getQuestionByEventAndIndex, arg.EventID, arg.QuestionIndex)
+	var i Question
+	err := row.Scan(
+		&i.QuestionID,
+		&i.EventID,
+		&i.BigText,
+		&i.SmallText,
+		&i.ImageFilename,
+		&i.ChoiceA,
+		&i.ChoiceB,
+	)
+	return i, err
+}
+
+const getQuestionByID = `-- name: GetQuestionByID :one
+SELECT question_id, event_id, big_text, small_text, image_filename, choice_a, choice_b
+FROM questions
+WHERE question_id = $1
+`
+
+func (q *Queries) GetQuestionByID(ctx context.Context, questionID string) (Question, error) {
+	row := q.db.QueryRowContext(ctx, getQuestionByID, questionID)
 	var i Question
 	err := row.Scan(
 		&i.QuestionID,

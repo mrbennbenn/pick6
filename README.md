@@ -28,6 +28,7 @@ go build -o pick6      # Build binary
 DATABASE_URL=postgres://user:pass@localhost:5432/pick6?sslmode=disable
 SECURE_COOKIE=false
 PORT=8080
+BASE_URL=http://localhost:8080
 ```
 
 ## Project Structure
@@ -42,39 +43,50 @@ static/      CSS & images
 
 ## API Examples
 
-### Get Event Engagement
+RESTful API designed for broadcast graphics systems. Poll endpoints every 1-2 seconds for live updates.
 
-Accepts either event ID or slug:
+### Get Event Overview
 
 ```bash
+# Using slug (recommended)
+curl http://localhost:8080/api/events/tk03
+
 # Using event ID
-curl http://localhost:8080/api/events/event_39aJ1km3pr9v1yQYX5gS88e3CUM/engagement
-
-# Using slug (easier!)
-curl http://localhost:8080/api/events/tk03/engagement
+curl http://localhost:8080/api/events/event_39aJ1km3pr9v1yQYX5gS88e3CUM
 ```
 
-Returns event-level metrics including total sessions, votes, and breakdown by slug with retention data.
+Returns event metadata, all questions summary, and total engagement.
 
-### Get Question Engagement
-
-Accepts either event ID or slug, and either question ID or index (1-based):
+### Get All Questions (Initial Load)
 
 ```bash
-# Using event slug and question index (easiest!)
-curl http://localhost:8080/api/events/tk03/questions/1/engagement
-
-# Using event ID and question index
-curl http://localhost:8080/api/events/event_39aJ1km3pr9v1yQYX5gS88e3CUM/questions/1/engagement
-
-# Using event slug and question ID
-curl http://localhost:8080/api/events/tk03/questions/question_39aJ1eE9ihQ3hH9kmOfKdCSueFP/engagement
-
-# Using event ID and question ID
-curl http://localhost:8080/api/events/event_39aJ1km3pr9v1yQYX5gS88e3CUM/questions/question_39aJ1eE9ihQ3hH9kmOfKdCSueFP/engagement
+# Get all questions with full engagement
+curl http://localhost:8080/api/events/tk03/questions
 ```
 
-Returns question-level metrics including votes for each option (A/B) and breakdown by slug.
+Returns all questions with metadata, images, and engagement. Use for initial page load.
+
+### Get Single Question (Live Polling)
+
+**Primary endpoint for broadcast graphics - poll this every 1-2 seconds:**
+
+```bash
+# Using slug and index (recommended for broadcast)
+curl http://localhost:8080/api/events/tk03/questions/1
+
+# Using event ID and index
+curl http://localhost:8080/api/events/event_39aJ1km3pr9v1yQYX5gS88e3CUM/questions/1
+
+# Using question ID
+curl http://localhost:8080/api/events/tk03/questions/question_39aJ1eE9ihQ3hH9kmOfKdCSueFP
+```
+
+Returns complete question data including:
+- Question text and choices
+- Full image URLs (ready to display)
+- Vote counts (total and per slug)
+- Vote percentages (calculated)
+- Real-time engagement stats
 
 ## Features
 
