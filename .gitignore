@@ -1,0 +1,45 @@
+# Binaries
+pick6
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Generated files (can regenerate with sqlc/templ)
+# Uncomment if you want to gitignore generated files
+# models/*.go
+# templates/*_templ.go
+
+# Scripts
+scripts/

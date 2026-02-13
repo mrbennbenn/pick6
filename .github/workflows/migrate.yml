@@ -1,0 +1,69 @@
+name: Database Migrations
+
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    name: Run Database Migration
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check migration files exist
+        run: |
+          if [ ! -d "database/migrations" ] || [ -z "$(ls -A database/migrations)" ]; then
+            echo "❌ Error: No migration files found in database/migrations/"
+            exit 1
+          fi
+          echo "✅ Migration files found:"
+          ls -la database/migrations/
+      
+      - name: Show current version
+        run: |
+          echo "📊 Current database version:"
+          docker run --rm \
+            -v ${{ github.workspace }}/database/migrations:/migrations \
+            migrate/migrate \
+            -path=/migrations \
+            -database "${{ secrets.DATABASE_URL }}" \
+            version || echo "No migrations applied yet"
+      
+      - name: Migrate to latest
+        run: |
+          echo "⬆️  Migrating to latest version..."
+          docker run --rm \
+            -v ${{ github.workspace }}/database/migrations:/migrations \
+            migrate/migrate \
+            -path=/migrations \
+            -database "${{ secrets.DATABASE_URL }}" \
+            up
+          echo "✅ Migrated to latest version"
+      
+      - name: Show final version
+        if: success()
+        run: |
+          echo "📊 Final database version:"
+          docker run --rm \
+            -v ${{ github.workspace }}/database/migrations:/migrations \
+            migrate/migrate \
+            -path=/migrations \
+            -database "${{ secrets.DATABASE_URL }}" \
+            version
+      
+      - name: Report success
+        if: success()
+        run: |
+          echo "✅ Migration completed successfully"
+          echo "Database is now at the latest version"
+      
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "❌ Migration workflow failed"
+          echo "Please check the logs above for details"
+          echo "⚠️  Database may be in an inconsistent state"
+          echo "Manual intervention may be required"
+          exit 1

@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pick6-db
+    environment:
+      POSTGRES_USER: pick6
+      POSTGRES_PASSWORD: pick6dev
+      POSTGRES_DB: pick6
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pick6"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    image: migrate/migrate
+    container_name: pick6-migrate
+    volumes:
+      - ./database/migrations:/migrations
+    command: ["-path", "/migrations", "-database", "postgres://pick6:pick6dev@postgres:5432/pick6?sslmode=disable", "up"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build: .
+    container_name: pick6-app
+    environment:
+      DATABASE_URL: postgres://pick6:pick6dev@postgres:5432/pick6?sslmode=disable
+      PORT: 8080
+      SESSION_SECRET: BexCscq+sxSBB+T8ueh5pNIHvBx6lfA9T8dvaEUW1Ic=
+      SECURE_COOKIE: "false"
+      API_KEYS: dev-key-1,dev-key-2,dev-key-3
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./static:/app/static
+
+volumes:
+  postgres_data:

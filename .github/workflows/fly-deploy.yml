@@ -1,0 +1,80 @@
+name: Deploy to Fly.io
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_hash:
+        description: 'Commit hash to deploy (leave empty for latest main)'
+        required: false
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy to Fly.io
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_hash || 'main' }}
+          fetch-depth: 0
+      
+      - name: Get commit info
+        id: commit_info
+        run: |
+          COMMIT_HASH=$(git rev-parse HEAD)
+          COMMIT_SHORT=$(git rev-parse --short HEAD)
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+          COMMIT_DATE=$(git log -1 --pretty=%ad --date=iso)
+          
+          echo "hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+          echo "short=$COMMIT_SHORT" >> $GITHUB_OUTPUT
+          echo "message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
+          echo "author=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
+          echo "date=$COMMIT_DATE" >> $GITHUB_OUTPUT
+      
+      - name: Display deployment info
+        run: |
+          echo "🚀 Deploying to Fly.io"
+          echo "📦 Commit: ${{ steps.commit_info.outputs.short }}"
+          echo "🔖 Full hash: ${{ steps.commit_info.outputs.hash }}"
+          echo "📝 Message: ${{ steps.commit_info.outputs.message }}"
+          echo "👤 Author: ${{ steps.commit_info.outputs.author }}"
+          echo "📅 Date: ${{ steps.commit_info.outputs.date }}"
+      
+      - name: Validate configuration
+        run: |
+          if [ ! -f "fly.toml" ]; then
+            echo "❌ Error: fly.toml not found"
+            exit 1
+          fi
+          echo "✅ fly.toml found"
+          
+          if [ ! -f "Dockerfile" ]; then
+            echo "❌ Error: Dockerfile not found"
+            exit 1
+          fi
+          echo "✅ Dockerfile found"
+      
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      
+      - name: Deploy to Fly.io
+        run: |
+          echo "🚀 Deploying commit ${{ steps.commit_info.outputs.short }}..."
+          flyctl deploy --remote-only --image-label "${{ steps.commit_info.outputs.short }}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      
+      - name: Get deployment status
+        if: success()
+        run: flyctl status
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      
+      - name: Report success
+        if: success()
+        run: |
+          echo "✅ Deployment successful!"
+          echo "🎯 Deployed commit: ${{ steps.commit_info.outputs.short }}"

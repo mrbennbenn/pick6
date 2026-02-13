@@ -1,0 +1,25 @@
+package templates
+
+templ Base(title string, content templ.Component) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title }</title>
+			<link rel="stylesheet" href="/static/stylesheets/style.css"/>
+		</head>
+	<body>
+		@content
+		<script>
+			// Prevent bfcache from showing stale vote state
+			window.addEventListener('pageshow', function(event) {
+				if (event.persisted) {
+					// Page restored from bfcache - reload for fresh data
+					window.location.reload();
+				}
+			});
+		</script>
+	</body>
+	</html>
+}

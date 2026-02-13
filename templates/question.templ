@@ -1,0 +1,116 @@
+package templates
+
+import "fmt"
+
+// Question represents a single question/matchup
+type Question struct {
+	QuestionID    string
+	BigText       string
+	SmallText     string
+	ImageFilename string
+	ChoiceA       string
+	ChoiceB       string
+}
+
+// QuestionViewModel contains all data needed for the question page
+type QuestionViewModel struct {
+	Slug            string
+	Questions       []Question
+	CurrentIndex    int
+	ExistingAnswers map[string]string
+	Errors          map[string]string
+}
+
+// QuestionPage is the main component for displaying a question
+templ QuestionPage(vm QuestionViewModel) {
+	@Base("Total Kombat - Predictions", QuestionContent(vm))
+}
+
+// QuestionContent renders the question content
+templ QuestionContent(vm QuestionViewModel) {
+	<div class="container">
+		<div class="prediction-section">
+			@ProgressBar(vm.CurrentIndex+1, len(vm.Questions))
+			if vm.CurrentIndex < len(vm.Questions) {
+				@QuestionForm(vm.Slug, vm.CurrentIndex, vm.Questions[vm.CurrentIndex], vm.ExistingAnswers, vm.Errors)
+			}
+		</div>
+	</div>
+}
+
+// ProgressBar shows current progress through questions
+templ ProgressBar(current, total int) {
+	<div class="progress-bar">
+		<div class="progress" style={ fmt.Sprintf("width: %.0f%%", float64(current)/float64(total)*100) }></div>
+		<span class="progress-text">{ fmt.Sprintf("%d / %d", current, total) }</span>
+	</div>
+}
+
+// QuestionForm renders the form for a single question
+templ QuestionForm(slug string, currentIndex int, q Question, existingAnswers map[string]string, errors map[string]string) {
+	<div class="prediction-content">
+		<h1>{ q.BigText }</h1>
+		<p class="prediction-description">{ q.SmallText }</p>
+		if existingChoice, hasAnswer := existingAnswers[q.QuestionID]; hasAnswer && existingChoice != "" {
+			@ExistingVoteIndicator(existingChoice, q)
+		} else {
+			<div class="vote-instruction">
+				<p>👆 Tap your fighter to vote!</p>
+			</div>
+		}
+		if errorMsg, hasError := errors["choice"]; hasError {
+			<div class="error-message">{ errorMsg }</div>
+		}
+		<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/%s/question/%d", slug, currentIndex+1)) } class="fighter-selection">
+			<div class="fighters">
+				@FighterButton("a", q.ChoiceA, existingAnswers[q.QuestionID])
+				<div class="vs">VS</div>
+				@FighterButton("b", q.ChoiceB, existingAnswers[q.QuestionID])
+			</div>
+		</form>
+		if q.ImageFilename != "" {
+			<div class="fight-image-container">
+				<img
+					src={ fmt.Sprintf("/static/images/%s", q.ImageFilename) }
+					alt={ fmt.Sprintf("%s vs %s", q.ChoiceA, q.ChoiceB) }
+					class="fight-image"
+				/>
+			</div>
+		}
+	</div>
+}
+
+// FighterButton renders a single fighter choice button
+templ FighterButton(choice, name, selectedChoice string) {
+	<button
+		type="submit"
+		name="choice"
+		value={ choice }
+		class={ "fighter-option", templ.KV("selected", choice == selectedChoice) }
+	>
+		<span class="fighter-name">{ name }</span>
+		<span class="vote-label">
+			if choice == selectedChoice {
+				VOTED
+			} else {
+				VOTE
+			}
+		</span>
+	</button>
+}
+
+// ExistingVoteIndicator shows which fighter the user already voted for
+templ ExistingVoteIndicator(choice string, q Question) {
+	<div class="existing-vote">
+		<p>
+			✅ You voted for: <strong>
+				if choice == "a" {
+					{ q.ChoiceA }
+				} else {
+					{ q.ChoiceB }
+				}
+			</strong>
+		</p>
+		<p class="change-vote">Change your mind? Vote again below!</p>
+	</div>
+}

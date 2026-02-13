@@ -1,0 +1,85 @@
+package templates
+
+import "fmt"
+
+// InfoFormViewModel contains all data needed for the info form page
+type InfoFormViewModel struct {
+	Slug   string
+	Name   string
+	Email  string
+	Phone  string
+	Errors map[string]string
+}
+
+// InfoFormPage is the main component for the user information form
+templ InfoFormPage(vm InfoFormViewModel) {
+	@Base("Total Kombat - Enter Your Details", InfoFormContent(vm))
+}
+
+// InfoFormContent renders the form content
+templ InfoFormContent(vm InfoFormViewModel) {
+	<div class="register-section">
+		<div class="register-content">
+			<h1>Join the Total Kombat Prediction Game!</h1>
+			<p class="register-subtitle">Enter your details to complete your entry</p>
+			<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/%s/submit-info", vm.Slug)) } class="register-form">
+				@FormField("name", "Full Name", vm.Name, vm.Errors["name"], "text", "Enter your full name", true)
+				@FormField("email", "Email", vm.Email, vm.Errors["email"], "email", "Enter your email", true)
+				@FormField("phone", "Phone Number", vm.Phone, vm.Errors["phone"], "tel", "Enter your phone number", true)
+				<button type="submit" class="register-button">Complete Entry!</button>
+				<p class="privacy-note">
+					Your details will only be used to contact you if you win the prize draw.
+				</p>
+			</form>
+			@PrizeSection()
+		</div>
+	</div>
+}
+
+// FormField renders a single form input field with label and error
+templ FormField(name, label, value, errorMsg, inputType, placeholder string, required bool) {
+	<div class={ "form-group", templ.KV("has-error", errorMsg != "") }>
+		<label for={ name }>
+			{ label }
+			if required {
+				{ " *" }
+			}
+		</label>
+		<input
+			type={ inputType }
+			id={ name }
+			name={ name }
+			value={ value }
+			placeholder={ placeholder }
+			if required {
+				required
+			}
+			maxlength="100"
+		/>
+		if errorMsg != "" {
+			<span class="error-message">{ errorMsg }</span>
+		}
+	</div>
+}
+
+// PrizeSection renders the VVIP package promotion
+templ PrizeSection() {
+	<div class="prize-details">
+		<h2>💎 Enter to Win £1,000 VVIP Package!</h2>
+		<div class="prize-content-flex">
+			<div class="prize-text">
+				<ul class="prize-list">
+					<li>🎟️ 5x VVIP passes to TK04</li>
+					<li>🍸 Bar tab at the VIP bar</li>
+					<li>🤝 Exclusive Meet & Greet with the fighters</li>
+					<li>📸 Exclusive photo with Total Kombat title belt</li>
+					<li>🎁 Limited Edition Total Kombat goodie bag</li>
+				</ul>
+			</div>
+			<div class="prize-image-container">
+				<img src="/static/images/ui-prize.jpg" alt="£1,000 VVIP Prize Package" class="prize-image"/>
+			</div>
+		</div>
+		<p class="prize-cta">Don't miss your chance to experience Total Kombat like a true champion!</p>
+	</div>
+}
