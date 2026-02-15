@@ -43,3 +43,10 @@ Thumbs.db
 
 # Scripts
 scripts/
+
+# Node.js / NPM
+node_modules/
+package-lock.json
+
+# Load test artifacts
+loadtest/reports/

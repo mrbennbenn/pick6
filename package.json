@@ -1,0 +1,18 @@
+{
+  "name": "pick6-load-tests",
+  "version": "1.0.0",
+  "description": "Load testing infrastructure for Pick6 application",
+  "private": true,
+  "scripts": {
+    "load-test": "artillery run loadtest/config.yml",
+    "load-test:report": "artillery run loadtest/config.yml --output loadtest/reports/results.json && artillery report loadtest/reports/results.json --output loadtest/reports/report.html"
+  },
+  "devDependencies": {
+    "artillery": "^2.0.20",
+    "playwright": "^1.48.0",
+    "@faker-js/faker": "^9.3.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

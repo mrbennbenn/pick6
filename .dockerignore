@@ -45,3 +45,8 @@
 # Scripts
 **/scripts
 fly.toml
+
+# Node.js / NPM / Load testing
+**/node_modules
+**/package-lock.json
+**/loadtest

@@ -1,0 +1,68 @@
+# Artillery Load Test Configuration for Pick6
+# Phase 1: Conservative thresholds for baseline establishment
+
+config:
+  target: "{{ $processEnvironment.TARGET_URL }}"
+  processor: "./loadtest/processor.js"
+  
+  # Load test phases - no ramp up, immediate sustained load
+  phases:
+    - duration: "{{ $processEnvironment.DURATION || 60 }}"
+      arrivalRate: "{{ $processEnvironment.VUS || 10 }}"
+      name: "Sustained Load"
+  
+  # Playwright engine configuration
+  engines:
+    playwright:
+      aggregateByName: true
+      launchOptions:
+        headless: true
+        args:
+          - '--disable-dev-shm-usage'
+          - '--no-sandbox'
+  
+  # Phase 1 Conservative Thresholds
+  ensure:
+    # Error rate thresholds (generous for baseline)
+    maxErrorRate: 10  # Fail if > 10% errors
+    
+    # Response time thresholds (very loose for initial baseline)
+    p95: 5000  # Fail if P95 > 5 seconds
+    p99: 10000  # Fail if P99 > 10 seconds
+  
+  # Warnings (logged but don't fail the test)
+  thresholds:
+    # Warn if error rate exceeds 2%
+    - metric: http.response_time.p95
+      value: 2000
+      level: warn
+    
+    # Warn if P99 exceeds 3 seconds
+    - metric: http.response_time.p99
+      value: 3000
+      level: warn
+  
+  # Plugin configuration
+  plugins:
+    expect: {}
+    metrics-by-endpoint:
+      # Group metrics by operation type
+      stripQueryString: true
+      ignoreUnknownEndpoints: false
+
+# Test Scenario
+scenarios:
+  - name: "Complete User Journey"
+    engine: playwright
+    
+    # Browser context setup (once per VU)
+    beforeScenario:
+      - function: "createBrowserContext"
+    
+    # The main user journey
+    flow:
+      - function: "userJourney"
+    
+    # Cleanup after journey
+    afterScenario:
+      - function: "closeBrowserContext"

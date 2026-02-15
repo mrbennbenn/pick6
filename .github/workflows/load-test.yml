@@ -1,0 +1,111 @@
+name: Load Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Full target URL including slug (e.g., https://pick6.fly.dev/tk03)'
+        required: true
+        type: string
+      virtual_users:
+        description: 'Number of concurrent virtual users'
+        required: false
+        type: number
+        default: 10
+      duration:
+        description: 'Test duration in seconds'
+        required: false
+        type: number
+        default: 60
+
+jobs:
+  load-test:
+    name: Run Load Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Validate target URL
+        run: |
+          echo "Target URL: ${{ inputs.target_url }}"
+          echo "Virtual Users: ${{ inputs.virtual_users }}"
+          echo "Duration: ${{ inputs.duration }}s"
+          
+          # Basic URL validation
+          if [[ ! "${{ inputs.target_url }}" =~ ^https?:// ]]; then
+            echo "Error: TARGET_URL must start with http:// or https://"
+            exit 1
+          fi
+
+      - name: Create reports directory
+        run: mkdir -p loadtest/reports
+
+      - name: Run Artillery load test
+        env:
+          TARGET_URL: ${{ inputs.target_url }}
+          VUS: ${{ inputs.virtual_users }}
+          DURATION: ${{ inputs.duration }}
+        run: |
+          echo "Starting load test..."
+          echo "  Target: $TARGET_URL"
+          echo "  Virtual Users: $VUS"
+          echo "  Duration: ${DURATION}s"
+          echo ""
+          
+          npm run load-test:report || true
+        continue-on-error: true
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "## Load Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Configuration:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Target URL: \`${{ inputs.target_url }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Virtual Users: ${{ inputs.virtual_users }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Duration: ${{ inputs.duration }}s" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f loadtest/reports/results.json ]; then
+            echo "**Status:** ✅ Test completed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Download the HTML report artifact below to view detailed metrics." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Status:** ❌ Test failed to produce results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the workflow logs for error details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-report-${{ github.run_number }}
+          path: |
+            loadtest/reports/results.json
+            loadtest/reports/report.html
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Check for test failures
+        run: |
+          if [ -f loadtest/reports/results.json ]; then
+            echo "Load test completed. Check artifacts for detailed report."
+          else
+            echo "Warning: No test results generated"
+            exit 1
+          fi
