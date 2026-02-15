@@ -7,8 +7,8 @@ config:
   
   # Load test phases - no ramp up, immediate sustained load
   phases:
-    - duration: "{{ $processEnvironment.DURATION || 60 }}"
-      arrivalRate: "{{ $processEnvironment.VUS || 10 }}"
+    - duration: {{ $processEnvironment.DURATION || 60 }}
+      arrivalRate: {{ $processEnvironment.VUS || 10 }}
       name: "Sustained Load"
   
   # Playwright engine configuration
