@@ -1,0 +1,42 @@
+{{define "content"}}
+<div class="register-section">
+    <div class="register-content">
+        <h1>Join the Total Kombat Prediction Game!</h1>
+        <p class="register-subtitle">Enter your details to start making predictions and enter the prize draw</p>
+        
+        <form method="POST" class="register-form">
+            <input type="hidden" id="posthog_user_id" name="posthog_user_id" value="">
+            
+            <div class="form-group">
+                <label for="name">Full Name *</label>
+                <input type="text" id="name" name="name" required 
+                       placeholder="Enter your full name" maxlength="100">
+            </div>
+            
+            <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                <input type="tel" id="phone" name="phone" required 
+                       placeholder="Enter your phone number" maxlength="20">
+            </div>
+            
+            <button type="submit" class="register-button">Start Predicting!</button>
+            
+            <p class="privacy-note">
+                Your details will only be used to contact you if you win the prize draw.
+            </p>
+        </form>
+    </div>
+</div>
+
+<script>
+// Capture PostHog user ID if available
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof posthog !== 'undefined') {
+        const userId = posthog.get_distinct_id();
+        document.getElementById('posthog_user_id').value = userId || 'anonymous';
+    } else {
+        document.getElementById('posthog_user_id').value = 'anonymous';
+    }
+});
+</script>
+{{end}}

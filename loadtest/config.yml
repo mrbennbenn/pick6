@@ -3,13 +3,14 @@
 
 config:
   target: "{{ $processEnvironment.TARGET_URL }}"
-  processor: "./loadtest/processor.js"
+  processor: "./processor.js"
   
-  # Load test phases - spawn VUs at 1 per second up to max VUS
+  # Load test phases - defaults that should be overridden via workflow
+  # NOTE: Artillery doesn't support template interpolation for phase numbers
+  # These will be overridden programmatically via processor
   phases:
-    - duration: {{ $processEnvironment.DURATION }}
-      arrivalRate: 1
-      maxVusers: {{ $processEnvironment.VUS }}
+    - duration: 60
+      arrivalRate: 10
       name: "Sustained Load"
   
   # Playwright engine configuration

@@ -1,0 +1,37 @@
+{{define "content"}}
+<div class="prize-section">
+    <div class="prize-content">
+        <h1>🏆 Congratulations!</h1>
+        <p>You've completed all predictions for Total Kombat TK02!</p>
+        
+        <div class="prize-details">
+            <h2>💎 Enter to Win £1,000 VVIP Package!</h2>
+
+            <div class="stripe-container">
+                <script async src="https://js.stripe.com/v3/buy-button.js"></script>
+                <stripe-buy-button
+                    buy-button-id="buy_btn_1S6v3TFR75jzwPoKddrYJogf"
+                    publishable-key="pk_live_qryDRzr1bF3c5hB7qrkNj74q00pseUO8tm"
+                ></stripe-buy-button>
+            </div>
+
+            <div class="prize-content-flex">
+                <div class="prize-text">
+                    <ul class="prize-list">
+                        <li>🎟️ 5x VVIP passes to TK03 in February 2026</li>
+                        <li>🍸 Bar tab at the VIP bar</li>
+                        <li>🤝 Exclusive Meet & Greet with the fighters</li>
+                        <li>📸 Exclusive photo with Total Kombat title belt</li>
+                        <li>🎁 Limited Edition Total Kombat goodie bag</li>
+                    </ul>
+                </div>
+                <div class="prize-image-container">
+                    <img src="/images/prize.png" alt="£1,000 VVIP Prize Package" class="prize-image">
+                </div>
+            </div>
+
+            <p class="prize-cta">Don't miss your chance to experience Total Kombat like a true champion!</p>
+        </div>
+    </div>
+</div>
+{{end}}

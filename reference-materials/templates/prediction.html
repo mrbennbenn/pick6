@@ -1,0 +1,44 @@
+{{define "content"}}
+<div class="prediction-section">
+    <div class="progress-bar">
+        <div class="progress" style="width: {{div (mul .Progress 100) .Total}}%"></div>
+        <span class="progress-text">{{.Progress}} / {{.Total}}</span>
+    </div>
+    
+    <div class="prediction-content">
+        <h1>{{.Prediction.Title}}</h1>
+        <p class="prediction-description">{{.Prediction.Description}}</p>
+        
+        {{if .ExistingVote}}
+        <div class="existing-vote">
+            <p>✅ You voted for: <strong>{{.ExistingVote.FighterChoice}}</strong></p>
+            <p class="change-vote">Change your mind? Vote again below!</p>
+        </div>
+        {{else}}
+        <div class="vote-instruction">
+            <p>👆 Tap your fighter to vote!</p>
+        </div>
+        {{end}}
+
+        <form method="POST" class="fighter-selection">
+            <div class="fighters">
+                <button type="submit" name="choice" value="{{.Prediction.Fighter1}}" class="fighter-option {{if .ExistingVote}}{{if eq .ExistingVote.FighterChoice .Prediction.Fighter1}}selected{{end}}{{end}}">
+                    <span class="fighter-name">{{.Prediction.Fighter1}}</span>
+                    <span class="vote-label">{{if .ExistingVote}}{{if eq .ExistingVote.FighterChoice .Prediction.Fighter1}}VOTED{{else}}VOTE{{end}}{{else}}VOTE{{end}}</span>
+                </button>
+                
+                <div class="vs">VS</div>
+                
+                <button type="submit" name="choice" value="{{.Prediction.Fighter2}}" class="fighter-option {{if .ExistingVote}}{{if eq .ExistingVote.FighterChoice .Prediction.Fighter2}}selected{{end}}{{end}}">
+                    <span class="fighter-name">{{.Prediction.Fighter2}}</span>
+                    <span class="vote-label">{{if .ExistingVote}}{{if eq .ExistingVote.FighterChoice .Prediction.Fighter2}}VOTED{{else}}VOTE{{end}}{{else}}VOTE{{end}}</span>
+                </button>
+            </div>
+        </form>
+        
+        <div class="fight-image-container">
+            <img src="{{.Prediction.FightImage}}" alt="{{.Prediction.Fighter1}} vs {{.Prediction.Fighter2}}" class="fight-image">
+        </div>
+    </div>
+</div>
+{{end}}

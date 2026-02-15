@@ -207,7 +207,28 @@ async function closeBrowserContext(context, events, done) {
   }
 }
 
+/**
+ * Override Artillery config at runtime with environment variables
+ * This allows numeric values which don't work in YAML templates
+ */
+function config(scriptConfig) {
+  const duration = parseInt(process.env.DURATION || '60');
+  const vus = parseInt(process.env.VUS || '10');
+  
+  // Override phases with environment variable values
+  scriptConfig.phases = [{
+    duration: duration,
+    arrivalRate: vus,
+    name: 'Sustained Load'
+  }];
+  
+  console.log(`[Config] Using DURATION=${duration}, VUS=${vus}`);
+  
+  return scriptConfig;
+}
+
 module.exports = {
+  config,
   userJourney,
   createBrowserContext,
   closeBrowserContext
