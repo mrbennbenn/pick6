@@ -56,13 +56,10 @@ scenarios:
     engine: playwright
     
     # Browser context setup (once per VU)
-    beforeScenario:
-      - function: "createBrowserContext"
+    beforeScenario: "createBrowserContext"
     
     # The main user journey
-    flow:
-      - function: "userJourney"
+    flowFunction: "userJourney"
     
     # Cleanup after journey
-    afterScenario:
-      - function: "closeBrowserContext"
+    afterScenario: "closeBrowserContext"
