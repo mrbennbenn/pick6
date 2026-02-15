@@ -58,16 +58,11 @@ async function userJourney(page, vuContext, events, test) {
       const choice = helpers.selectRandomChoice();
       console.log(`[VU-${vuId}] Selecting choice: ${choice}`);
       
-      // Click the radio button for the choice
-      await page.click(`input[type="radio"][value="${choice}"]`);
-      
-      // Small delay before submitting
-      await helpers.humanDelay(200, 500);
-      
-      // Submit the form
+      // Click the fighter button (which submits the form directly)
+      // The page uses <button type="submit" name="choice" value="a/b">
       const submitStart = Date.now();
       await Promise.all([
-        page.click('button[type="submit"]'),
+        page.click(`button[type="submit"][name="choice"][value="${choice}"]`),
         page.waitForNavigation({ timeout: 10000 })
       ]);
       
