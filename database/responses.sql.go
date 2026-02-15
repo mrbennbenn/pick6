@@ -9,6 +9,31 @@ import (
 	"context"
 )
 
+const getResponseByQuestionAndSession = `-- name: GetResponseByQuestionAndSession :one
+SELECT question_id, session_id, slug, choice, created_at, updated_at
+FROM responses
+WHERE question_id = $1 AND session_id = $2
+`
+
+type GetResponseByQuestionAndSessionParams struct {
+	QuestionID string `json:"question_id"`
+	SessionID  string `json:"session_id"`
+}
+
+func (q *Queries) GetResponseByQuestionAndSession(ctx context.Context, arg GetResponseByQuestionAndSessionParams) (Response, error) {
+	row := q.db.QueryRowContext(ctx, getResponseByQuestionAndSession, arg.QuestionID, arg.SessionID)
+	var i Response
+	err := row.Scan(
+		&i.QuestionID,
+		&i.SessionID,
+		&i.Slug,
+		&i.Choice,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getResponsesBySessionAndEvent = `-- name: GetResponsesBySessionAndEvent :many
 SELECT r.question_id, r.session_id, r.slug, r.choice, r.created_at, r.updated_at
 FROM responses r

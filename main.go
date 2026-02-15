@@ -60,6 +60,7 @@ func main() {
 	r.Use(chimiddleware.RealIP)
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
+	r.Use(chimiddleware.Compress(5))               // Gzip compression (level 5 balances speed/size)
 	r.Use(chimiddleware.Timeout(10 * time.Second)) // Reduced from 20s for faster failure detection
 
 	// Serve static files with caching headers
@@ -81,9 +82,13 @@ func main() {
 	})
 
 	r.Route("/{slug}", func(r chi.Router) {
+		// Initialize event cache with 1 hour TTL (events/questions are static)
+		eventCache := database.NewEventCache(queries, 1*time.Hour, 2*time.Hour)
+
 		uiHandler := &handlers.UI{
-			Queries: queries,
-			Log:     logger,
+			Queries:    queries,
+			Log:        logger,
+			EventCache: eventCache,
 		}
 
 		// Initialize session cache with 5 minute default expiration and 10 minute cleanup interval

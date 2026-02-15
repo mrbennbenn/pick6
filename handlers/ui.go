@@ -15,8 +15,9 @@ import (
 )
 
 type UI struct {
-	Queries *database.Queries
-	Log     *log.Logger
+	Queries    *database.Queries
+	Log        *log.Logger
+	EventCache *database.EventCache // Cache for event and questions data
 }
 
 // RedirectToFirst redirects to the first question
@@ -24,8 +25,8 @@ type UI struct {
 func (h *UI) RedirectToFirst(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 
-	// Validate slug exists
-	_, err := h.Queries.GetEventBySlug(r.Context(), slug)
+	// Validate slug exists using cache
+	_, err := h.EventCache.GetEventWithQuestionsBySlug(r.Context(), slug)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.NotFound(w, r)
@@ -62,11 +63,11 @@ func (h *UI) ShowQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get event (with retry logic for transient failures)
-	var event database.Event
+	// Get event and questions from cache (with retry for cache misses that hit DB)
+	var eventData *database.CachedEventData
 	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
 		var queryErr error
-		event, queryErr = h.Queries.GetEventBySlug(r.Context(), slug)
+		eventData, queryErr = h.EventCache.GetEventWithQuestionsBySlug(r.Context(), slug)
 		return queryErr
 	})
 	if err != nil {
@@ -74,23 +75,12 @@ func (h *UI) ShowQuestion(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
-		h.Log.Printf("Error getting event: %v", err)
+		h.Log.Printf("Error getting event and questions: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	// Get all questions (needed for progress indicator in template) with retry
-	var questions []database.Question
-	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
-		var queryErr error
-		questions, queryErr = h.Queries.ListQuestionsByEventID(r.Context(), event.EventID)
-		return queryErr
-	})
-	if err != nil {
-		h.Log.Printf("Error listing questions: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
+	questions := eventData.Questions
 
 	// Validate index
 	if currentIndex < 0 || currentIndex >= len(questions) {
@@ -98,21 +88,29 @@ func (h *UI) ShowQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get existing responses (with retry)
-	var responses []database.Response
+	currentQuestion := questions[currentIndex]
+
+	// Get only the current question's response (optimization: 1 query instead of full JOIN)
+	existingAnswers := make(map[string]string)
 	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
-		var queryErr error
-		responses, queryErr = h.Queries.GetResponsesBySessionAndEvent(r.Context(),
-			database.GetResponsesBySessionAndEventParams{
-				SessionID: sessionID,
-				EventID:   event.EventID,
+		response, queryErr := h.Queries.GetResponseByQuestionAndSession(r.Context(),
+			database.GetResponseByQuestionAndSessionParams{
+				QuestionID: currentQuestion.QuestionID,
+				SessionID:  sessionID,
 			})
+		if queryErr == nil {
+			// Found existing answer for this question
+			existingAnswers[response.QuestionID] = response.Choice
+		}
+		// sql.ErrNoRows is fine - just means no answer yet
+		if queryErr == sql.ErrNoRows {
+			return nil
+		}
 		return queryErr
 	})
 	if err != nil {
-		h.Log.Printf("Error getting responses: %v", err)
-		// Continue without existing responses
-		responses = []database.Response{}
+		h.Log.Printf("Error getting response for current question: %v", err)
+		// Continue without existing response (worst case: user re-answers)
 	}
 
 	// Build view model
@@ -120,7 +118,7 @@ func (h *UI) ShowQuestion(w http.ResponseWriter, r *http.Request) {
 		Slug:            slug,
 		Questions:       convertToTemplateQuestions(questions),
 		CurrentIndex:    currentIndex,
-		ExistingAnswers: buildExistingAnswersMap(responses),
+		ExistingAnswers: existingAnswers, // Now only contains current question's answer if exists
 		Errors:          parseErrors(r),
 	}
 
@@ -157,11 +155,11 @@ func (h *UI) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get event (with retry logic)
-	var event database.Event
+	// Get event and questions from cache (with retry for cache misses)
+	var eventData *database.CachedEventData
 	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
 		var queryErr error
-		event, queryErr = h.Queries.GetEventBySlug(r.Context(), slug)
+		eventData, queryErr = h.EventCache.GetEventWithQuestionsBySlug(r.Context(), slug)
 		return queryErr
 	})
 	if err != nil {
@@ -169,23 +167,12 @@ func (h *UI) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
-		h.Log.Printf("Error getting event: %v", err)
+		h.Log.Printf("Error getting event and questions: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	// Get question count from database to validate order
-	var questions []database.Question
-	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
-		var queryErr error
-		questions, queryErr = h.Queries.ListQuestionsByEventID(r.Context(), event.EventID)
-		return queryErr
-	})
-	if err != nil {
-		h.Log.Printf("Error listing questions: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
+	questions := eventData.Questions
 
 	// Validate order is within range (database is authoritative)
 	if order < 1 || order > len(questions) {
@@ -247,8 +234,8 @@ func (h *UI) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 func (h *UI) ShowInfoForm(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 
-	// Validate slug exists
-	_, err := h.Queries.GetEventBySlug(r.Context(), slug)
+	// Validate slug exists using cache
+	_, err := h.EventCache.GetEventWithQuestionsBySlug(r.Context(), slug)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.NotFound(w, r)
@@ -368,8 +355,8 @@ func (h *UI) ShowEnd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get event
-	event, err := h.Queries.GetEventBySlug(r.Context(), slug)
+	// Get event from cache
+	eventData, err := h.EventCache.GetEventWithQuestionsBySlug(r.Context(), slug)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.NotFound(w, r)
@@ -384,7 +371,7 @@ func (h *UI) ShowEnd(w http.ResponseWriter, r *http.Request) {
 	responses, err := h.Queries.GetResponsesBySessionAndEvent(r.Context(),
 		database.GetResponsesBySessionAndEventParams{
 			SessionID: sessionID,
-			EventID:   event.EventID,
+			EventID:   eventData.Event.EventID,
 		})
 	if err != nil {
 		h.Log.Printf("Error getting responses: %v", err)

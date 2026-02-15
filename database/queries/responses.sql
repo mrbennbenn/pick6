@@ -13,3 +13,8 @@ SELECT r.question_id, r.session_id, r.slug, r.choice, r.created_at, r.updated_at
 FROM responses r
 JOIN questions q ON q.question_id = r.question_id
 WHERE r.session_id = $1 AND q.event_id = $2;
+
+-- name: GetResponseByQuestionAndSession :one
+SELECT question_id, session_id, slug, choice, created_at, updated_at
+FROM responses
+WHERE question_id = $1 AND session_id = $2;
