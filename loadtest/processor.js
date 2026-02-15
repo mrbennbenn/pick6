@@ -210,19 +210,33 @@ async function closeBrowserContext(context, events, done) {
 /**
  * Override Artillery config at runtime with environment variables
  * This allows numeric values which don't work in YAML templates
+ * 
+ * Uses a two-phase approach:
+ * - Phase 1: Spawn all VUs immediately (1 second)
+ * - Phase 2: Let them run concurrently for the remaining duration
  */
 function config(scriptConfig) {
   const duration = parseInt(process.env.DURATION || '60');
   const vus = parseInt(process.env.VUS || '10');
   
-  // Override phases with environment variable values
-  scriptConfig.phases = [{
-    duration: duration,
-    arrivalRate: vus,
-    name: 'Sustained Load'
-  }];
+  // Phase 1: Initialize all users immediately
+  // Phase 2: Run for remaining duration with no new arrivals
+  scriptConfig.phases = [
+    {
+      duration: 1,
+      arrivalCount: vus,
+      name: 'Initialize Users'
+    },
+    {
+      duration: Math.max(duration - 1, 1),
+      arrivalRate: 0,
+      name: 'Sustained Load'
+    }
+  ];
   
-  console.log(`[Config] Using DURATION=${duration}, VUS=${vus}`);
+  console.log(`[Config] Using DURATION=${duration}, VUS=${vus} (concurrent)`);
+  console.log(`[Config] Phase 1: Spawn ${vus} users in 1s`);
+  console.log(`[Config] Phase 2: Run for ${Math.max(duration - 1, 1)}s with 0 new arrivals`);
   
   return scriptConfig;
 }

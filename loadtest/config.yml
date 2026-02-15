@@ -8,9 +8,14 @@ config:
   # Load test phases - defaults that should be overridden via workflow
   # NOTE: Artillery doesn't support template interpolation for phase numbers
   # These will be overridden programmatically via processor
+  # Phase 1: Spawn all users immediately
+  # Phase 2: Let them run for the test duration
   phases:
-    - duration: 60
-      arrivalRate: 10
+    - duration: 1
+      arrivalCount: 10
+      name: "Initialize Users"
+    - duration: 59
+      arrivalRate: 0
       name: "Sustained Load"
   
   # Playwright engine configuration

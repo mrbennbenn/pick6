@@ -28,9 +28,11 @@ console.log('');
 const configPath = path.join(__dirname, 'config.yml');
 let config = fs.readFileSync(configPath, 'utf8');
 
-// Replace placeholder values with actual numbers
-config = config.replace(/duration: 60/, `duration: ${DURATION}`);
-config = config.replace(/arrivalRate: 10/, `arrivalRate: ${VUS}`);
+// Replace placeholder values with actual numbers for two-phase configuration
+// Phase 1: arrivalCount for spawning users
+config = config.replace(/arrivalCount: 10/, `arrivalCount: ${VUS}`);
+// Phase 2: duration for sustained run (DURATION - 1 second for phase 1)
+config = config.replace(/duration: 59/, `duration: ${Math.max(DURATION - 1, 1)}`);
 
 // Write temporary config
 const tmpConfig = path.join(__dirname, '.config.tmp.yml');
