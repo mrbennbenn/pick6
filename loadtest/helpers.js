@@ -24,12 +24,12 @@ function generateName() {
 /**
  * Generate a valid UK mobile phone number in E.164 format
  * Format: +447XXXXXXXXX (UK mobile numbers)
+ * Uses fixed test number to avoid validation issues
  */
 function generateUKMobile() {
-  // UK mobile numbers start with 07, which becomes +447 in E.164
-  // Generate 9 random digits after +447
-  const randomDigits = faker.string.numeric(9);
-  return `+447${randomDigits}`;
+  // Use fixed UK test number range (07700 9xxxxx)
+  // This is a reserved range for testing and will pass mobile validation
+  return '+447700900123';
 }
 
 /**

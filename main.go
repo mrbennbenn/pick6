@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -31,7 +32,20 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	db, err := sql.Open("postgres", cfg.DatabaseURL)
+	// Add prefer_simple_protocol to fix Neon Postgres prepared statement cache issues
+	// This forces the driver to use simple query protocol instead of prepared statements
+	// Prevents "bind message supplies X parameters, but prepared statement requires Y" errors
+	dbURL := cfg.DatabaseURL
+	if !strings.Contains(dbURL, "prefer_simple_protocol") {
+		separator := "?"
+		if strings.Contains(dbURL, "?") {
+			separator = "&"
+		}
+		dbURL = dbURL + separator + "prefer_simple_protocol=true"
+		log.Println("Added prefer_simple_protocol=true to database connection")
+	}
+
+	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
@@ -42,8 +56,9 @@ func main() {
 	}
 
 	// Configure connection pool to prevent connection exhaustion under load
-	db.SetMaxOpenConns(25)                 // Limit max concurrent connections
-	db.SetMaxIdleConns(5)                  // Keep idle connections ready for reuse
+	// Targeting 100 concurrent users with Neon Postgres
+	db.SetMaxOpenConns(100)                // Increased for high concurrency (was 25)
+	db.SetMaxIdleConns(20)                 // Increased to reduce connection churn (was 5)
 	db.SetConnMaxLifetime(5 * time.Minute) // Recycle connections after 5 minutes
 	db.SetConnMaxIdleTime(2 * time.Minute) // Close idle connections after 2 minutes
 
