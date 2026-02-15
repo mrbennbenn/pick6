@@ -7,9 +7,9 @@ config:
   
   # Load test phases - spawn VUs at 1 per second up to max VUS
   phases:
-    - duration: {{ $processEnvironment.DURATION || 60 }}
+    - duration: {{ $processEnvironment.DURATION }}
       arrivalRate: 1
-      maxVusers: {{ $processEnvironment.VUS || 10 }}
+      maxVusers: {{ $processEnvironment.VUS }}
       name: "Sustained Load"
   
   # Playwright engine configuration
