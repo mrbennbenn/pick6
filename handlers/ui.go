@@ -174,31 +174,27 @@ func (h *UI) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate index range (questions are 1-6, so order must be 1-6)
-	if order < 1 || order > 6 {
+	// Get question count from database to validate order
+	var questions []database.Question
+	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
+		var queryErr error
+		questions, queryErr = h.Queries.ListQuestionsByEventID(r.Context(), event.EventID)
+		return queryErr
+	})
+	if err != nil {
+		h.Log.Printf("Error listing questions: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Validate order is within range (database is authoritative)
+	if order < 1 || order > len(questions) {
 		http.NotFound(w, r)
 		return
 	}
 
-	// Fetch only the current question instead of all questions (optimization) with retry
-	var currentQuestion database.Question
-	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
-		var queryErr error
-		currentQuestion, queryErr = h.Queries.GetQuestionByEventAndIndex(r.Context(), database.GetQuestionByEventAndIndexParams{
-			EventID:       event.EventID,
-			QuestionIndex: order,
-		})
-		return queryErr
-	})
-	if err != nil {
-		if err == sql.ErrNoRows {
-			http.NotFound(w, r)
-			return
-		}
-		h.Log.Printf("Error getting question: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
+	// Get the current question by index
+	currentQuestion := questions[order-1]
 
 	// Parse form
 	if err := r.ParseForm(); err != nil {
@@ -235,8 +231,8 @@ func (h *UI) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine next step (hardcoded to 6 questions)
-	if order == 6 {
+	// Determine next step (database is authoritative for question count)
+	if order == len(questions) {
 		// Last question - redirect to info form
 		http.Redirect(w, r, fmt.Sprintf("/%s/submit-info", slug), http.StatusSeeOther)
 	} else {
