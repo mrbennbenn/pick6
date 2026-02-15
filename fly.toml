@@ -6,6 +6,9 @@
 app = 'pick6'
 primary_region = 'lhr'
 
+[env]
+  BASE_URL = "https://yoohoo.it.com"
+
 [build]
 
 [http_service]
