@@ -12,6 +12,7 @@ require (
 )
 
 require (
+	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect

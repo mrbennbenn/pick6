@@ -15,6 +15,7 @@ import (
 	"github.com/mrbennbenn/pick6/database"
 	"github.com/mrbennbenn/pick6/handlers"
 	"github.com/mrbennbenn/pick6/middleware"
+	cache "github.com/patrickmn/go-cache"
 )
 
 type Config struct {
@@ -40,6 +41,12 @@ func main() {
 		log.Fatalf("failed to ping database: %v", err)
 	}
 
+	// Configure connection pool to prevent connection exhaustion under load
+	db.SetMaxOpenConns(25)                 // Limit max concurrent connections
+	db.SetMaxIdleConns(5)                  // Keep idle connections ready for reuse
+	db.SetConnMaxLifetime(5 * time.Minute) // Recycle connections after 5 minutes
+	db.SetConnMaxIdleTime(2 * time.Minute) // Close idle connections after 2 minutes
+
 	log.Println("successfully connected to database")
 
 	queries := database.New(db)
@@ -53,7 +60,7 @@ func main() {
 	r.Use(chimiddleware.RealIP)
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
-	r.Use(chimiddleware.Timeout(20 * time.Second))
+	r.Use(chimiddleware.Timeout(10 * time.Second)) // Reduced from 20s for faster failure detection
 
 	// Serve static files with caching headers
 	fileServer := http.FileServer(http.Dir("./static"))
@@ -79,10 +86,14 @@ func main() {
 			Log:     logger,
 		}
 
+		// Initialize session cache with 5 minute default expiration and 10 minute cleanup interval
+		sessionCache := cache.New(5*time.Minute, 10*time.Minute)
+
 		sessionMiddleware := &middleware.Session{
 			SecureCookie: cfg.SecureCookie,
 			Log:          logger,
 			Queries:      queries,
+			Cache:        sessionCache,
 		}
 		r.Use(sessionMiddleware.ServeHTTP)
 

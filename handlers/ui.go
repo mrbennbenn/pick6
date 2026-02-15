@@ -62,8 +62,13 @@ func (h *UI) ShowQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get event
-	event, err := h.Queries.GetEventBySlug(r.Context(), slug)
+	// Get event (with retry logic for transient failures)
+	var event database.Event
+	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
+		var queryErr error
+		event, queryErr = h.Queries.GetEventBySlug(r.Context(), slug)
+		return queryErr
+	})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.NotFound(w, r)
@@ -74,8 +79,13 @@ func (h *UI) ShowQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get all questions
-	questions, err := h.Queries.ListQuestionsByEventID(r.Context(), event.EventID)
+	// Get all questions (needed for progress indicator in template) with retry
+	var questions []database.Question
+	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
+		var queryErr error
+		questions, queryErr = h.Queries.ListQuestionsByEventID(r.Context(), event.EventID)
+		return queryErr
+	})
 	if err != nil {
 		h.Log.Printf("Error listing questions: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -88,12 +98,17 @@ func (h *UI) ShowQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get existing responses
-	responses, err := h.Queries.GetResponsesBySessionAndEvent(r.Context(),
-		database.GetResponsesBySessionAndEventParams{
-			SessionID: sessionID,
-			EventID:   event.EventID,
-		})
+	// Get existing responses (with retry)
+	var responses []database.Response
+	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
+		var queryErr error
+		responses, queryErr = h.Queries.GetResponsesBySessionAndEvent(r.Context(),
+			database.GetResponsesBySessionAndEventParams{
+				SessionID: sessionID,
+				EventID:   event.EventID,
+			})
+		return queryErr
+	})
 	if err != nil {
 		h.Log.Printf("Error getting responses: %v", err)
 		// Continue without existing responses
@@ -133,7 +148,6 @@ func (h *UI) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	currentIndex := order - 1
 
 	// Get session ID
 	sessionID, err := middleware.SessionFromCtx(r.Context())
@@ -143,8 +157,13 @@ func (h *UI) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get event and questions
-	event, err := h.Queries.GetEventBySlug(r.Context(), slug)
+	// Get event (with retry logic)
+	var event database.Event
+	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
+		var queryErr error
+		event, queryErr = h.Queries.GetEventBySlug(r.Context(), slug)
+		return queryErr
+	})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.NotFound(w, r)
@@ -155,20 +174,31 @@ func (h *UI) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	questions, err := h.Queries.ListQuestionsByEventID(r.Context(), event.EventID)
-	if err != nil {
-		h.Log.Printf("Error listing questions: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// Validate index
-	if currentIndex < 0 || currentIndex >= len(questions) {
+	// Validate index range (questions are 1-6, so order must be 1-6)
+	if order < 1 || order > 6 {
 		http.NotFound(w, r)
 		return
 	}
 
-	currentQuestion := questions[currentIndex]
+	// Fetch only the current question instead of all questions (optimization) with retry
+	var currentQuestion database.Question
+	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
+		var queryErr error
+		currentQuestion, queryErr = h.Queries.GetQuestionByEventAndIndex(r.Context(), database.GetQuestionByEventAndIndexParams{
+			EventID:       event.EventID,
+			QuestionIndex: order,
+		})
+		return queryErr
+	})
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.NotFound(w, r)
+			return
+		}
+		h.Log.Printf("Error getting question: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	// Parse form
 	if err := r.ParseForm(); err != nil {
@@ -189,12 +219,15 @@ func (h *UI) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Save response
-	_, err = h.Queries.UpsertResponse(r.Context(), database.UpsertResponseParams{
-		QuestionID: currentQuestion.QuestionID,
-		SessionID:  sessionID,
-		Slug:       slug,
-		Choice:     choice,
+	// Save response (with retry logic)
+	err = database.WithRetry(r.Context(), database.DefaultRetryConfig(), func() error {
+		_, queryErr := h.Queries.UpsertResponse(r.Context(), database.UpsertResponseParams{
+			QuestionID: currentQuestion.QuestionID,
+			SessionID:  sessionID,
+			Slug:       slug,
+			Choice:     choice,
+		})
+		return queryErr
 	})
 	if err != nil {
 		h.Log.Printf("Error saving response: %v", err)
@@ -202,8 +235,8 @@ func (h *UI) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine next step
-	if currentIndex == len(questions)-1 {
+	// Determine next step (hardcoded to 6 questions)
+	if order == 6 {
 		// Last question - redirect to info form
 		http.Redirect(w, r, fmt.Sprintf("/%s/submit-info", slug), http.StatusSeeOther)
 	} else {
