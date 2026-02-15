@@ -7,12 +7,20 @@
 body {
     font-family: 'Arial', sans-serif;
     background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), 
-                url('/static/images/bg-hero.jpg');
+                url('/static/images/bg-hero.webp');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
     color: white;
     min-height: 100vh;
+}
+
+/* Fallback for browsers that don't support WebP */
+@supports not (background-image: url('/static/images/bg-hero.webp')) {
+    body {
+        background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), 
+                    url('/static/images/bg-hero.png');
+    }
 }
 
 .container {
@@ -240,7 +248,7 @@ body {
 .prize-section {
     text-align: center;
     padding: 60px 0;
-    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/static/images/bg-hero.jpg');
+    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/static/images/bg-hero.webp');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
@@ -504,7 +512,7 @@ stripe-buy-button {
 .success-section {
     text-align: center;
     padding: 60px 0;
-    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/static/images/bg-hero.jpg');
+    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/static/images/bg-hero.webp');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
@@ -683,7 +691,7 @@ stripe-buy-button {
 .register-section {
     text-align: center;
     padding: 60px 0;
-    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/static/images/bg-hero.jpg');
+    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/static/images/bg-hero.webp');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;

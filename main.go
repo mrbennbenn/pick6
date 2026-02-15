@@ -55,9 +55,9 @@ func main() {
 	r.Use(chimiddleware.Recoverer)
 	r.Use(chimiddleware.Timeout(20 * time.Second))
 
-	// Serve static files
+	// Serve static files with caching headers
 	fileServer := http.FileServer(http.Dir("./static"))
-	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
+	r.Handle("/static/*", middleware.CacheControl(http.StripPrefix("/static/", fileServer)))
 
 	// API routes (public - no authentication required)
 	r.Route("/api", func(r chi.Router) {

@@ -77,7 +77,10 @@ templ PrizeSection() {
 				</ul>
 			</div>
 			<div class="prize-image-container">
-				<img src="/static/images/ui-prize.jpg" alt="£1,000 VVIP Prize Package" class="prize-image"/>
+				<picture>
+					<source srcset="/static/images/ui-prize.webp" type="image/webp"/>
+					<img src="/static/images/ui-prize.jpg" alt="£1,000 VVIP Prize Package" class="prize-image" loading="lazy"/>
+				</picture>
 			</div>
 		</div>
 		<p class="prize-cta">Don't miss your chance to experience Total Kombat like a true champion!</p>

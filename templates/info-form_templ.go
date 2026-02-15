@@ -325,7 +325,7 @@ func PrizeSection() templ.Component {
 			templ_7745c5c3_Var16 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div class=\"prize-details\"><h2>💎 Enter to Win £1,000 VVIP Package!</h2><div class=\"prize-content-flex\"><div class=\"prize-text\"><ul class=\"prize-list\"><li>🎟️ 5x VVIP passes to TK04</li><li>🍸 Bar tab at the VIP bar</li><li>🤝 Exclusive Meet & Greet with the fighters</li><li>📸 Exclusive photo with Total Kombat title belt</li><li>🎁 Limited Edition Total Kombat goodie bag</li></ul></div><div class=\"prize-image-container\"><img src=\"/static/images/ui-prize.jpg\" alt=\"£1,000 VVIP Prize Package\" class=\"prize-image\"></div></div><p class=\"prize-cta\">Don't miss your chance to experience Total Kombat like a true champion!</p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div class=\"prize-details\"><h2>💎 Enter to Win £1,000 VVIP Package!</h2><div class=\"prize-content-flex\"><div class=\"prize-text\"><ul class=\"prize-list\"><li>🎟️ 5x VVIP passes to TK04</li><li>🍸 Bar tab at the VIP bar</li><li>🤝 Exclusive Meet & Greet with the fighters</li><li>📸 Exclusive photo with Total Kombat title belt</li><li>🎁 Limited Edition Total Kombat goodie bag</li></ul></div><div class=\"prize-image-container\"><picture><source srcset=\"/static/images/ui-prize.webp\" type=\"image/webp\"> <img src=\"/static/images/ui-prize.jpg\" alt=\"£1,000 VVIP Prize Package\" class=\"prize-image\" loading=\"lazy\"></picture></div></div><p class=\"prize-cta\">Don't miss your chance to experience Total Kombat like a true champion!</p></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

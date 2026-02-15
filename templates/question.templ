@@ -70,11 +70,7 @@ templ QuestionForm(slug string, currentIndex int, q Question, existingAnswers ma
 		</form>
 		if q.ImageFilename != "" {
 			<div class="fight-image-container">
-				<img
-					src={ fmt.Sprintf("/static/images/%s", q.ImageFilename) }
-					alt={ fmt.Sprintf("%s vs %s", q.ChoiceA, q.ChoiceB) }
-					class="fight-image"
-				/>
+				@OptimizedImage(q.ImageFilename, fmt.Sprintf("%s vs %s", q.ChoiceA, q.ChoiceB), "fight-image")
 			</div>
 		}
 	</div>
@@ -113,4 +109,26 @@ templ ExistingVoteIndicator(choice string, q Question) {
 		</p>
 		<p class="change-vote">Change your mind? Vote again below!</p>
 	</div>
+}
+
+// OptimizedImage renders an optimized image with WebP support and lazy loading
+templ OptimizedImage(filename, alt, class string) {
+	<picture>
+		<source srcset={ fmt.Sprintf("/static/images/%s", getWebPFilename(filename)) } type="image/webp"/>
+		<img
+			src={ fmt.Sprintf("/static/images/%s", filename) }
+			alt={ alt }
+			class={ class }
+			loading="lazy"
+		/>
+	</picture>
+}
+
+// Helper function to convert filename to WebP version
+func getWebPFilename(filename string) string {
+	// Remove extension and add .webp
+	if len(filename) > 4 {
+		return filename[:len(filename)-4] + ".webp"
+	}
+	return filename
 }
